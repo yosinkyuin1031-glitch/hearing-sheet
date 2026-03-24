@@ -69,9 +69,15 @@ export default function Step5Confirm({ data, onBack }: Props) {
 
       if (error) throw error
 
-      // AI仕様書生成をバックグラウンドで実行
+      // AI仕様書生成 + メール通知をバックグラウンドで実行
       if (inserted?.id) {
         fetch('/api/generate-spec', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ responseId: inserted.id }),
+        }).catch(console.error)
+
+        fetch('/api/notify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ responseId: inserted.id }),
