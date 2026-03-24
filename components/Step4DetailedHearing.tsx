@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { HearingFormData, HearingQuestion } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import VoiceInput from './VoiceInput'
@@ -12,8 +12,36 @@ interface Props {
   onBack: () => void
 }
 
+// 選択アプリのカテゴリをDBのcondition_appにマッチさせるマッピング
+const APP_TO_CONDITION: Record<string, string[]> = {
+  // サイト・LP制作系
+  'ホームページ制作': ['サイト・LP制作'],
+  '症状別ランディングページ': ['サイト・LP制作'],
+  '採用サイト': ['サイト・LP制作'],
+  'ECサイト・オンラインショップ': ['サイト・LP制作', '販売'],
+  'ポートフォリオサイト': ['サイト・LP制作'],
+  // 診断系
+  '睡眠チェック診断': ['無料診断・チェック'],
+  '自律神経セルフチェック': ['無料診断・チェック'],
+  '肩こり・腰痛リスク診断': ['無料診断・チェック'],
+  '体質診断クイズ': ['無料診断・チェック'],
+  'ストレスチェック': ['無料診断・チェック'],
+  // 販売系
+  '在庫・物販管理': ['販売'],
+  '睡眠管理アプリ': ['販売'],
+}
+
+const SECTION_LABELS: Record<string, { icon: string; title: string }> = {
+  'common': { icon: '📝', title: '基本的なこと' },
+  'サイト・LP制作': { icon: '🌐', title: 'サイト・デザインについて' },
+  '無料診断・チェック': { icon: '✅', title: '診断ツールについて' },
+  '販売': { icon: '🛒', title: '商品・販売について' },
+  'backend': { icon: '🎯', title: '商品導線・ゴール設計' },
+  'schedule': { icon: '📅', title: '予算・スケジュール' },
+}
+
 export default function Step4DetailedHearing({ data, onChange, onNext, onBack }: Props) {
-  const [questions, setQuestions] = useState<HearingQuestion[]>([])
+  const [allQuestions, setAllQuestions] = useState<HearingQuestion[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -24,11 +52,61 @@ export default function Step4DetailedHearing({ data, onChange, onNext, onBack }:
     const { data: qData } = await supabase
       .from('hearing_questions')
       .select('*')
-      .eq('step', 3)
       .order('sort_order')
-    setQuestions((qData as HearingQuestion[]) || [])
+    setAllQuestions((qData as HearingQuestion[]) || [])
     setLoading(false)
   }
+
+  // 選択アプリから該当するcondition_appを算出
+  const activeConditions = useMemo(() => {
+    const conditions = new Set<string>()
+    for (const appName of data.selectedApps) {
+      const mapped = APP_TO_CONDITION[appName]
+      if (mapped) mapped.forEach((c) => conditions.add(c))
+    }
+    return conditions
+  }, [data.selectedApps])
+
+  // 表示する質問をフィルタ
+  const visibleQuestions = useMemo(() => {
+    return allQuestions.filter((q) => {
+      // condition_appがnull = 共通質問 → 常に表示
+      if (!q.condition_app) return true
+      // condition_appがある → 該当カテゴリのアプリが選ばれていれば表示
+      return activeConditions.has(q.condition_app)
+    })
+  }, [allQuestions, activeConditions])
+
+  // セクション分け
+  const sections = useMemo(() => {
+    const result: { key: string; questions: HearingQuestion[] }[] = []
+
+    // step=3: 共通質問
+    const commonQs = visibleQuestions.filter((q) => q.step === 3)
+    if (commonQs.length > 0) result.push({ key: 'common', questions: commonQs })
+
+    // step=4: 条件付き質問（カテゴリ別）
+    const conditionalQs = visibleQuestions.filter((q) => q.step === 4 && q.condition_app)
+    const condGroups = new Map<string, HearingQuestion[]>()
+    for (const q of conditionalQs) {
+      const key = q.condition_app!
+      if (!condGroups.has(key)) condGroups.set(key, [])
+      condGroups.get(key)!.push(q)
+    }
+    for (const [key, qs] of condGroups) {
+      result.push({ key, questions: qs })
+    }
+
+    // step=4: バックエンド系（condition_app=null, step=4）
+    const backendQs = visibleQuestions.filter((q) => q.step === 4 && !q.condition_app)
+    if (backendQs.length > 0) result.push({ key: 'backend', questions: backendQs })
+
+    // step=5: 予算・スケジュール
+    const scheduleQs = visibleQuestions.filter((q) => q.step === 5)
+    if (scheduleQs.length > 0) result.push({ key: 'schedule', questions: scheduleQs })
+
+    return result
+  }, [visibleQuestions])
 
   const updateAnswer = (key: string, value: string) => {
     onChange({
@@ -36,7 +114,7 @@ export default function Step4DetailedHearing({ data, onChange, onNext, onBack }:
     })
   }
 
-  const requiredKeys = questions.filter((q) => q.is_required).map((q) => q.question_key)
+  const requiredKeys = visibleQuestions.filter((q) => q.is_required).map((q) => q.question_key)
   const canProceed = requiredKeys.every((key) => data.detailedAnswers[key]?.trim())
 
   if (loading) {
@@ -49,48 +127,68 @@ export default function Step4DetailedHearing({ data, onChange, onNext, onBack }:
 
   return (
     <div className="animate-fade-in space-y-6 px-4">
-      <div className="text-center mb-8">
+      <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800">もう少し詳しく教えてください</h2>
         <p className="text-gray-500 mt-2 text-sm">
           音声入力もご利用いただけます（マイクボタン）
         </p>
+        {activeConditions.size > 0 && (
+          <p className="text-blue-600 mt-1 text-xs">
+            選択した内容に合わせた質問を表示しています
+          </p>
+        )}
       </div>
 
-      <div className="space-y-6">
-        {questions.map((q) => (
-          <div key={q.id}>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {q.question_text}
-              {q.is_required && <span className="text-red-500 ml-1">*</span>}
-            </label>
-            {q.question_type === 'textarea' ? (
-              <VoiceInput
-                value={data.detailedAnswers[q.question_key] || ''}
-                onChange={(v) => updateAnswer(q.question_key, v)}
-                placeholder="こちらに入力、または音声入力..."
-                rows={3}
-              />
-            ) : q.question_type === 'select' ? (
-              <select
-                value={data.detailedAnswers[q.question_key] || ''}
-                onChange={(e) => updateAnswer(q.question_key, e.target.value)}
-                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-              >
-                <option value="">選択してください</option>
-                {(q.options || []).map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
+      <div className="space-y-8">
+        {sections.map((section) => {
+          const label = SECTION_LABELS[section.key]
+          return (
+            <div key={section.key}>
+              {label && (
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+                  <span className="text-base">{label.icon}</span>
+                  <h3 className="font-bold text-gray-700 text-sm">{label.title}</h3>
+                </div>
+              )}
+              <div className="space-y-5">
+                {section.questions.map((q) => (
+                  <div key={q.id}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {q.question_text}
+                      {q.is_required && <span className="text-red-500 ml-1">*</span>}
+                    </label>
+                    {q.question_type === 'textarea' ? (
+                      <VoiceInput
+                        value={data.detailedAnswers[q.question_key] || ''}
+                        onChange={(v) => updateAnswer(q.question_key, v)}
+                        placeholder="こちらに入力、または音声入力..."
+                        rows={3}
+                      />
+                    ) : q.question_type === 'select' ? (
+                      <select
+                        value={data.detailedAnswers[q.question_key] || ''}
+                        onChange={(e) => updateAnswer(q.question_key, e.target.value)}
+                        className="w-full rounded-xl border border-gray-200 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      >
+                        <option value="">選択してください</option>
+                        {(q.options || []).map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={data.detailedAnswers[q.question_key] || ''}
+                        onChange={(e) => updateAnswer(q.question_key, e.target.value)}
+                        className="w-full rounded-xl border border-gray-200 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    )}
+                  </div>
                 ))}
-              </select>
-            ) : (
-              <input
-                type="text"
-                value={data.detailedAnswers[q.question_key] || ''}
-                onChange={(e) => updateAnswer(q.question_key, e.target.value)}
-                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            )}
-          </div>
-        ))}
+              </div>
+            </div>
+          )
+        })}
       </div>
 
       <div className="flex gap-3">

@@ -11,14 +11,26 @@ interface Props {
 }
 
 const QUESTION_LABELS: Record<string, string> = {
-  target_users: '主にどんな方が使いますか？',
-  current_method: '今の管理方法は？',
-  pain_points: '一番困っていることは？',
-  must_features: '絶対に必要な機能は？',
-  nice_to_have: 'あったら嬉しい機能は？',
-  budget_range: 'ご予算のイメージは？',
-  timeline: 'いつ頃までに使いたいですか？',
-  other_notes: 'その他、伝えておきたいこと',
+  target_users: '主なユーザー',
+  current_method: '現在の管理方法',
+  pain_points: '一番の課題',
+  must_features: '必須機能',
+  nice_to_have: 'あると嬉しい機能',
+  site_color_image: 'サイトの色味・雰囲気',
+  site_reference: '参考サイト',
+  site_goal: 'サイトのゴール',
+  diagnosis_type: '診断の内容',
+  diagnosis_lead: '診断後の導線',
+  diagnosis_channel: '診断の利用場所',
+  ec_products: '販売商品',
+  ec_product_count: '商品数',
+  ec_subscription: '定期購入の必要性',
+  backend_product: 'バックエンド商品',
+  product_flow: '理想的な顧客導線',
+  existing_tools: '現在使用中のサービス',
+  budget_range: 'ご予算',
+  timeline: '希望スケジュール',
+  other_notes: 'その他',
 }
 
 export default function Step5Confirm({ data, onBack }: Props) {
