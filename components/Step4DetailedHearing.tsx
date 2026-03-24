@@ -68,14 +68,23 @@ export default function Step4DetailedHearing({ data, onChange, onNext, onBack }:
   }, [data.selectedApps])
 
   // 表示する質問をフィルタ
+  const paymentType = data.detailedAnswers['payment_type'] || ''
+
   const visibleQuestions = useMemo(() => {
     return allQuestions.filter((q) => {
-      // condition_appがnull = 共通質問 → 常に表示
-      if (!q.condition_app) return true
       // condition_appがある → 該当カテゴリのアプリが選ばれていれば表示
-      return activeConditions.has(q.condition_app)
+      if (q.condition_app) return activeConditions.has(q.condition_app)
+      // 予算の出し分け: 一括/月額の選択に応じて表示
+      if (q.question_key === 'budget_onetime') {
+        return paymentType === '一括払い（買い切り）' || paymentType === 'まだ決まっていない' || paymentType === '相談して決めたい'
+      }
+      if (q.question_key === 'budget_monthly') {
+        return paymentType === '月額制（サブスク）' || paymentType === 'まだ決まっていない' || paymentType === '相談して決めたい'
+      }
+      // それ以外の共通質問 → 常に表示
+      return true
     })
-  }, [allQuestions, activeConditions])
+  }, [allQuestions, activeConditions, paymentType])
 
   // セクション分け
   const sections = useMemo(() => {

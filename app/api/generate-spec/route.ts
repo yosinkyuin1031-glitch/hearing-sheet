@@ -38,7 +38,9 @@ const QUESTION_LABELS: Record<string, string> = {
   backend_product: 'バックエンド商品',
   product_flow: '理想的な顧客導線',
   existing_tools: '現在使用中のサービス',
-  budget_range: '予算感',
+  payment_type: 'お支払い方法',
+  budget_onetime: '一括予算',
+  budget_monthly: '月額予算',
   timeline: '希望スケジュール',
   other_notes: 'その他の要望',
 }
