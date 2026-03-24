@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { HearingFormData, PortfolioApp, APP_CATEGORIES } from '@/lib/types'
+import { HearingFormData, PortfolioApp } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import VoiceInput from './VoiceInput'
 
@@ -12,10 +12,37 @@ interface Props {
   onBack: () => void
 }
 
+const categoryIcons: Record<string, string> = {
+  '顧客・患者管理': '👥',
+  '予約・受付': '📅',
+  '検査・診断ツール': '🔍',
+  '無料診断・チェック': '✅',
+  'サイト・LP制作': '🌐',
+  '集客・マーケティング': '📈',
+  'LINE・コミュニケーション': '💬',
+  '経営・業務管理': '💰',
+  '健康管理・患者向け': '❤️',
+  'その他・便利ツール': '🛠️',
+}
+
+const categoryDescriptions: Record<string, string> = {
+  '顧客・患者管理': '顧客情報・カルテ・会員管理',
+  '予約・受付': '予約・問診・順番待ち',
+  '検査・診断ツール': '検査・姿勢分析・スイング診断',
+  '無料診断・チェック': '集客用の無料診断ページ',
+  'サイト・LP制作': 'HP・LP・ECサイト・採用サイト',
+  '集客・マーケティング': 'MEO・口コミ・SNS・広告',
+  'LINE・コミュニケーション': 'LINE配信・予約・チャットボット',
+  '経営・業務管理': '売上・シフト・レセプト・在庫',
+  '健康管理・患者向け': '睡眠管理・セルフケア・施術提案',
+  'その他・便利ツール': '動画編集・アンケート・請求書',
+}
+
 export default function Step3AppSelection({ data, onChange, onNext, onBack }: Props) {
   const [apps, setApps] = useState<PortfolioApp[]>([])
   const [loading, setLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'category' | 'list'>('category')
 
   useEffect(() => {
     loadApps()
@@ -44,20 +71,7 @@ export default function Step3AppSelection({ data, onChange, onNext, onBack }: Pr
     ? apps.filter((a) => a.category === activeCategory)
     : apps
 
-  const categoryIcons: Record<string, string> = {
-    '顧客管理': '👥',
-    '予約管理': '📅',
-    '検査・評価': '📋',
-    '集客・MEO': '📍',
-    '問診・受付': '🏥',
-    'Web制作': '🌐',
-    '経営管理': '💰',
-    '健康管理': '❤️',
-    '販売': '🛒',
-    '集客・CRM': '💬',
-    '集客・広告': '📢',
-    '人事・労務': '👔',
-  }
+  const selectedCount = data.selectedApps.length
 
   if (loading) {
     return (
@@ -68,87 +82,157 @@ export default function Step3AppSelection({ data, onChange, onNext, onBack }: Pr
   }
 
   return (
-    <div className="animate-fade-in space-y-6 px-4">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">こんなアプリがあります</h2>
-        <p className="text-gray-500 mt-2 text-sm">
-          「これに近いものが欲しい」というアプリを選んでください
+    <div className="animate-fade-in space-y-5 px-4">
+      <div className="text-center mb-4">
+        <h2 className="text-2xl font-bold text-gray-800">
+          こんなものが作れます
+        </h2>
+        <p className="text-gray-500 mt-2 text-sm leading-relaxed">
+          アプリ・サイト・診断ツールなど、<br />
+          「これに近いものが欲しい」を選んでください
         </p>
       </div>
 
-      {/* カテゴリフィルタ */}
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-        <button
-          onClick={() => setActiveCategory(null)}
-          className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-            !activeCategory
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-        >
-          すべて
-        </button>
-        {categories.map((cat) => (
+      {/* 表示切替 */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-400">全{apps.length}種類の制作実績</p>
+        <div className="flex bg-gray-100 rounded-lg p-0.5">
           <button
-            key={cat}
-            onClick={() => setActiveCategory(cat === activeCategory ? null : cat)}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-              activeCategory === cat
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            onClick={() => { setViewMode('category'); setActiveCategory(null) }}
+            className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+              viewMode === 'category' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
             }`}
           >
-            {categoryIcons[cat] || '📱'} {cat}
+            カテゴリ別
           </button>
-        ))}
+          <button
+            onClick={() => setViewMode('list')}
+            className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+              viewMode === 'list' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
+            }`}
+          >
+            一覧
+          </button>
+        </div>
       </div>
 
-      {/* アプリカード */}
-      <div className="grid grid-cols-1 gap-3">
-        {filteredApps.map((app) => {
-          const selected = data.selectedApps.includes(app.name)
-          return (
+      {/* カテゴリ別表示 */}
+      {viewMode === 'category' && !activeCategory && (
+        <div className="grid grid-cols-2 gap-3">
+          {categories.map((cat) => {
+            const catApps = apps.filter((a) => a.category === cat)
+            const selectedInCat = catApps.filter((a) => data.selectedApps.includes(a.name)).length
+            return (
+              <button
+                key={cat}
+                onClick={() => { setActiveCategory(cat); setViewMode('list') }}
+                className="text-left p-3 rounded-xl border-2 border-gray-200 bg-white hover:border-blue-200 transition-all relative"
+              >
+                <span className="text-2xl">{categoryIcons[cat] || '📱'}</span>
+                <h3 className="font-bold text-gray-800 text-sm mt-1">{cat}</h3>
+                <p className="text-[11px] text-gray-400 mt-0.5 leading-tight">
+                  {categoryDescriptions[cat] || ''}
+                </p>
+                <span className="text-[10px] text-gray-400 mt-1 inline-block">{catApps.length}種類</span>
+                {selectedInCat > 0 && (
+                  <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">
+                    {selectedInCat}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* リスト表示（カテゴリ選択後 or 一覧モード） */}
+      {(viewMode === 'list' || activeCategory) && (
+        <>
+          {/* カテゴリフィルタ */}
+          <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
             <button
-              key={app.id}
-              onClick={() => toggleApp(app.name)}
-              className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                selected
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 bg-white hover:border-blue-200'
+              onClick={() => setActiveCategory(null)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                !activeCategory
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              <div className="flex items-start gap-3">
-                <div className={`w-6 h-6 mt-0.5 rounded-md flex items-center justify-center flex-shrink-0 ${
-                  selected ? 'bg-blue-600 text-white' : 'border-2 border-gray-300'
-                }`}>
-                  {selected && (
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{categoryIcons[app.category] || '📱'}</span>
-                    <h3 className="font-bold text-gray-800">{app.name}</h3>
-                  </div>
-                  <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-gray-100 text-xs text-gray-500">
-                    {app.category}
-                  </span>
-                  <p className="text-sm text-gray-500 mt-1">{app.description}</p>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {app.features?.slice(0, 4).map((f) => (
-                      <span key={f} className="px-2 py-0.5 rounded-md bg-gray-50 text-xs text-gray-600 border border-gray-100">
-                        {f}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              すべて
             </button>
-          )
-        })}
-      </div>
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat === activeCategory ? null : cat)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                  activeCategory === cat
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {categoryIcons[cat] || '📱'} {cat}
+              </button>
+            ))}
+          </div>
+
+          {/* アプリカード */}
+          <div className="grid grid-cols-1 gap-2">
+            {filteredApps.map((app) => {
+              const selected = data.selectedApps.includes(app.name)
+              return (
+                <button
+                  key={app.id}
+                  onClick={() => toggleApp(app.name)}
+                  className={`w-full text-left p-3 rounded-xl border-2 transition-all ${
+                    selected
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 bg-white hover:border-blue-200'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 mt-0.5 rounded flex items-center justify-center flex-shrink-0 ${
+                      selected ? 'bg-blue-600 text-white' : 'border-2 border-gray-300'
+                    }`}>
+                      {selected && (
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">{categoryIcons[app.category] || '📱'}</span>
+                        <h3 className="font-bold text-gray-800 text-sm">{app.name}</h3>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">{app.description}</p>
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {app.features?.slice(0, 3).map((f) => (
+                          <span key={f} className="px-1.5 py-0.5 rounded bg-gray-50 text-[10px] text-gray-500 border border-gray-100">
+                            {f}
+                          </span>
+                        ))}
+                        {(app.features?.length || 0) > 3 && (
+                          <span className="text-[10px] text-gray-400">+{(app.features?.length || 0) - 3}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* カテゴリ一覧に戻る */}
+          {activeCategory && (
+            <button
+              onClick={() => { setActiveCategory(null); setViewMode('category') }}
+              className="w-full text-center text-sm text-blue-600 hover:underline py-2"
+            >
+              カテゴリ一覧に戻る
+            </button>
+          )}
+        </>
+      )}
 
       {/* 補足コメント */}
       <div>
@@ -158,16 +242,29 @@ export default function Step3AppSelection({ data, onChange, onNext, onBack }: Pr
         <VoiceInput
           value={data.similarAppNotes}
           onChange={(v) => onChange({ similarAppNotes: v })}
-          placeholder="「これとこれを組み合わせたい」「全然違うものが欲しい」など..."
+          placeholder="「これとこれを組み合わせたい」「全然違うものが欲しい」「ここにないものが欲しい」など..."
           rows={3}
         />
       </div>
 
-      {data.selectedApps.length > 0 && (
+      {/* 選択中のアプリ */}
+      {selectedCount > 0 && (
         <div className="bg-blue-50 rounded-xl p-3 border border-blue-100">
-          <p className="text-sm text-blue-700 font-medium">
-            選択中: {data.selectedApps.join('、')}
-          </p>
+          <p className="text-xs text-blue-600 font-medium mb-1">選択中（{selectedCount}件）</p>
+          <div className="flex flex-wrap gap-1">
+            {data.selectedApps.map((name) => (
+              <span
+                key={name}
+                onClick={() => toggleApp(name)}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs cursor-pointer hover:bg-blue-200"
+              >
+                {name}
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
