@@ -49,6 +49,7 @@ export interface HearingFormData {
   selectedApps: string[]
   similarAppNotes: string
   detailedAnswers: Record<string, string>
+  referenceImages: string[]
 }
 
 export const INDUSTRIES = [

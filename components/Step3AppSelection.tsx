@@ -180,44 +180,62 @@ export default function Step3AppSelection({ data, onChange, onNext, onBack }: Pr
             {filteredApps.map((app) => {
               const selected = data.selectedApps.includes(app.name)
               return (
-                <button
-                  key={app.id}
-                  onClick={() => toggleApp(app.name)}
-                  className={`w-full text-left p-3 rounded-xl border-2 transition-all ${
-                    selected
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 bg-white hover:border-blue-200'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-5 h-5 mt-0.5 rounded flex items-center justify-center flex-shrink-0 ${
-                      selected ? 'bg-blue-600 text-white' : 'border-2 border-gray-300'
-                    }`}>
-                      {selected && (
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">{categoryIcons[app.category] || '📱'}</span>
-                        <h3 className="font-bold text-gray-800 text-sm">{app.name}</h3>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-0.5">{app.description}</p>
-                      <div className="flex flex-wrap gap-1 mt-1.5">
-                        {app.features?.slice(0, 3).map((f) => (
-                          <span key={f} className="px-1.5 py-0.5 rounded bg-gray-50 text-[10px] text-gray-500 border border-gray-100">
-                            {f}
-                          </span>
-                        ))}
-                        {(app.features?.length || 0) > 3 && (
-                          <span className="text-[10px] text-gray-400">+{(app.features?.length || 0) - 3}</span>
+                <div key={app.id} className={`w-full text-left rounded-xl border-2 transition-all overflow-hidden ${
+                  selected
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 bg-white hover:border-blue-200'
+                }`}>
+                  <button
+                    onClick={() => toggleApp(app.name)}
+                    className="w-full text-left p-3"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`w-5 h-5 mt-0.5 rounded flex items-center justify-center flex-shrink-0 ${
+                        selected ? 'bg-blue-600 text-white' : 'border-2 border-gray-300'
+                      }`}>
+                        {selected && (
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
                         )}
                       </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{categoryIcons[app.category] || '📱'}</span>
+                          <h3 className="font-bold text-gray-800 text-sm">{app.name}</h3>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-0.5">{app.description}</p>
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {app.features?.slice(0, 3).map((f) => (
+                            <span key={f} className="px-1.5 py-0.5 rounded bg-gray-50 text-[10px] text-gray-500 border border-gray-100">
+                              {f}
+                            </span>
+                          ))}
+                          {(app.features?.length || 0) > 3 && (
+                            <span className="text-[10px] text-gray-400">+{(app.features?.length || 0) - 3}</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </button>
+                  </button>
+                  {/* デモリンク */}
+                  {app.demo_url && (
+                    <div className="px-3 pb-2 pl-11">
+                      <a
+                        href={app.demo_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 text-[11px] text-blue-500 hover:text-blue-700 hover:underline"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                        デモを見る
+                      </a>
+                    </div>
+                  )}
+                </div>
               )
             })}
           </div>

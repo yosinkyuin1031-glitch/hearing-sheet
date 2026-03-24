@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { HearingFormData, HearingQuestion } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import VoiceInput from './VoiceInput'
+import ImageUpload from './ImageUpload'
 
 interface Props {
   data: HearingFormData
@@ -198,6 +199,21 @@ export default function Step4DetailedHearing({ data, onChange, onNext, onBack }:
             </div>
           )
         })}
+      </div>
+
+      {/* 参考イメージアップロード */}
+      <div>
+        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+          <span className="text-base">📎</span>
+          <h3 className="font-bold text-gray-700 text-sm">参考イメージ（任意）</h3>
+        </div>
+        <p className="text-xs text-gray-500 mb-2">
+          「こんなデザインにしたい」「今使っているツールの画面」など、参考になる画像があればアップロードしてください
+        </p>
+        <ImageUpload
+          existingUrls={data.referenceImages}
+          onUpload={(urls) => onChange({ referenceImages: urls })}
+        />
       </div>
 
       <div className="flex gap-3">

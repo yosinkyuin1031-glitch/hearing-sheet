@@ -16,6 +16,11 @@ const QUESTION_LABELS: Record<string, string> = {
   pain_points: '一番の課題',
   must_features: '必須機能',
   nice_to_have: 'あると嬉しい機能',
+  user_count: '使う人数',
+  customer_count: '顧客・患者数',
+  locations: '店舗・拠点数',
+  data_migration: 'データ移行',
+  priority: '最優先で実現したいこと',
   site_color_image: 'サイトの色味・雰囲気',
   site_reference: '参考サイト',
   site_goal: 'サイトのゴール',
@@ -159,6 +164,24 @@ export default function Step5Confirm({ data, onBack }: Props) {
                   </div>
                 )
               })}
+            </div>
+          </div>
+        )}
+
+        {/* 参考イメージ */}
+        {data.referenceImages.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <h3 className="font-bold text-gray-700 text-sm mb-3 flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">5</span>
+              参考イメージ
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {data.referenceImages.map((url, i) => (
+                <div key={i} className="w-20 h-20 rounded-lg overflow-hidden border border-gray-200">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt={`参考${i + 1}`} className="w-full h-full object-cover" />
+                </div>
+              ))}
             </div>
           </div>
         )}

@@ -19,6 +19,7 @@ const initialData: HearingFormData = {
   selectedApps: [],
   similarAppNotes: '',
   detailedAnswers: {},
+  referenceImages: [],
 }
 
 export default function HomePage() {
