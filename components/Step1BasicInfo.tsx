@@ -27,7 +27,7 @@ export default function Step1BasicInfo({ data, onChange, onNext }: Props) {
             type="text"
             value={data.contactName}
             onChange={(e) => onChange({ contactName: e.target.value })}
-            placeholder="大口 太郎"
+            placeholder="山田 太郎"
             className="w-full rounded-xl border border-gray-200 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>

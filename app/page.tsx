@@ -91,16 +91,8 @@ export default function HomePage() {
           <Step2Challenges
             data={formData}
             onChange={updateData}
-            onNext={() => setStep(3)}
-            onBack={() => setStep(1)}
-          />
-        )}
-        {step === 3 && (
-          <Step3AppSelection
-            data={formData}
-            onChange={updateData}
             onNext={() => setStep(4)}
-            onBack={() => setStep(2)}
+            onBack={() => setStep(1)}
           />
         )}
         {step === 4 && (
@@ -108,7 +100,7 @@ export default function HomePage() {
             data={formData}
             onChange={updateData}
             onNext={() => setStep(5)}
-            onBack={() => setStep(3)}
+            onBack={() => setStep(2)}
           />
         )}
         {step === 5 && (

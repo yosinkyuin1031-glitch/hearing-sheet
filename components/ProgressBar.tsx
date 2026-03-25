@@ -3,7 +3,6 @@
 const STEPS = [
   { num: 1, label: '基本情報' },
   { num: 2, label: 'お困りごと' },
-  { num: 3, label: 'アプリ選択' },
   { num: 4, label: '詳細ヒアリング' },
   { num: 5, label: '確認・送信' },
 ]
