@@ -72,7 +72,7 @@ export default function HomePage() {
         <div className="max-w-lg mx-auto">
           <div className="flex items-center justify-between px-4 py-3">
             <h1 className="font-bold text-gray-800 text-sm">アプリ開発ヒアリング</h1>
-            <span className="text-xs text-gray-400">Step {step} / 5</span>
+            <span className="text-xs text-gray-400">Step {step <= 2 ? step : step - 1} / 4</span>
           </div>
           <ProgressBar currentStep={step} />
         </div>
