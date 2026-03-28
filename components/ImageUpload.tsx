@@ -47,6 +47,7 @@ export default function ImageUpload({ onUpload, existingUrls }: Props) {
             <button
               type="button"
               onClick={() => removeImage(i)}
+              aria-label={`参考画像${i + 1}を削除`}
               className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs"
             >
               x

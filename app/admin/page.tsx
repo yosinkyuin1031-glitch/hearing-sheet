@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { HearingResponse, CHALLENGES } from '@/lib/types'
+import { useToast } from '@/components/ui/Toast'
 
-const ADMIN_PASSWORD = 'oguchi2026'
+const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'oguchi2026'
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   draft: { label: '下書き', color: 'bg-gray-100 text-gray-600' },
@@ -19,6 +20,7 @@ export default function AdminPage() {
   const [responses, setResponses] = useState<HearingResponse[]>([])
   const [selected, setSelected] = useState<HearingResponse | null>(null)
   const [loading, setLoading] = useState(false)
+  const { showToast, ToastContainer } = useToast()
 
   const loadResponses = useCallback(async () => {
     setLoading(true)
@@ -40,9 +42,12 @@ export default function AdminPage() {
     if (selected?.id === id) {
       setSelected((prev) => prev ? { ...prev, status: status as HearingResponse['status'] } : null)
     }
+    const label = STATUS_LABELS[status]?.label || status
+    showToast(`ステータスを「${label}」に変更しました`, 'success')
   }
 
   async function regenerateSpec(id: string) {
+    showToast('AI仕様書を生成中...', 'info', 10000)
     const res = await fetch('/api/generate-spec', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -53,6 +58,9 @@ export default function AdminPage() {
       // Refresh selected
       const { data } = await supabase.from('hearing_responses').select('*').eq('id', id).single()
       if (data) setSelected(data as HearingResponse)
+      showToast('AI仕様書を生成しました', 'success')
+    } else {
+      showToast('仕様書の生成に失敗しました。もう一度お試しください。', 'error')
     }
   }
 
@@ -70,14 +78,23 @@ export default function AdminPage() {
   if (!authed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <ToastContainer />
         <div className="w-full max-w-sm">
           <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">管理画面</h1>
-          <form onSubmit={(e) => { e.preventDefault(); if (password === ADMIN_PASSWORD) setAuthed(true); else alert('パスワードが違います') }}>
+          <form onSubmit={(e) => {
+            e.preventDefault()
+            if (password === ADMIN_PASSWORD) {
+              setAuthed(true)
+            } else {
+              showToast('パスワードが違います', 'error')
+            }
+          }}>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="パスワードを入力"
+              aria-label="管理画面パスワード"
               className="w-full rounded-xl border border-gray-200 px-4 py-3 text-base mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button type="submit" className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700">
@@ -95,6 +112,7 @@ export default function AdminPage() {
 
     return (
       <div className="min-h-screen bg-gray-50">
+        <ToastContainer />
         <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
           <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
             <button onClick={() => setSelected(null)} className="text-blue-600 font-medium text-sm flex items-center gap-1">
@@ -214,6 +232,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <ToastContainer />
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-bold text-gray-800">ヒアリング管理</h1>

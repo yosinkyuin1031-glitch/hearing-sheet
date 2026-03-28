@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { startSpeechRecognition, isSpeechSupported } from '@/lib/speech'
+import { useToast } from '@/components/ui/Toast'
 
 interface VoiceInputProps {
   value: string
@@ -14,6 +15,7 @@ export default function VoiceInput({ value, onChange, placeholder, rows = 3 }: V
   const [isListening, setIsListening] = useState(false)
   const [supported, setSupported] = useState(false)
   const [stopFn, setStopFn] = useState<(() => void) | null>(null)
+  const { showToast, ToastContainer } = useToast()
 
   useEffect(() => {
     setSupported(isSpeechSupported())
@@ -32,6 +34,9 @@ export default function VoiceInput({ value, onChange, placeholder, rows = 3 }: V
       () => {
         setIsListening(false)
         setStopFn(null)
+      },
+      (message) => {
+        showToast(message, 'error', 5000)
       }
     )
 
@@ -39,21 +44,24 @@ export default function VoiceInput({ value, onChange, placeholder, rows = 3 }: V
       setIsListening(true)
       setStopFn(() => stop)
     }
-  }, [isListening, stopFn, onChange])
+  }, [isListening, stopFn, onChange, showToast])
 
   return (
     <div className="relative">
+      <ToastContainer />
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
+        aria-label={placeholder || '入力フィールド'}
         className="w-full rounded-xl border border-gray-200 px-4 py-3 pr-12 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
       />
       {supported && (
         <button
           type="button"
           onClick={toggleListening}
+          aria-label={isListening ? '音声入力を停止' : '音声で入力'}
           className={`absolute right-3 top-3 w-9 h-9 rounded-full flex items-center justify-center transition-all ${
             isListening
               ? 'bg-red-500 text-white'

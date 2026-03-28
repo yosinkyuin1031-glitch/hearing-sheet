@@ -4,13 +4,14 @@
 
 export function startSpeechRecognition(
   onResult: (text: string) => void,
-  onEnd?: () => void
+  onEnd?: () => void,
+  onError?: (message: string) => void
 ): (() => void) | null {
   const w = window as any
   const SpeechRecognition = w.SpeechRecognition || w.webkitSpeechRecognition
 
   if (!SpeechRecognition) {
-    alert('お使いのブラウザは音声入力に対応していません。Chrome をお使いください。')
+    onError?.('お使いのブラウザは音声入力に対応していません。Chrome をお使いください。')
     return null
   }
 

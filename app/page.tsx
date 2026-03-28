@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { HearingFormData } from '@/lib/types'
 import ProgressBar from '@/components/ProgressBar'
 import Step1BasicInfo from '@/components/Step1BasicInfo'
@@ -8,6 +8,8 @@ import Step2Challenges from '@/components/Step2Challenges'
 import Step3AppSelection from '@/components/Step3AppSelection'
 import Step4DetailedHearing from '@/components/Step4DetailedHearing'
 import Step5Confirm from '@/components/Step5Confirm'
+
+const SESSION_KEY = 'hearing_form_data'
 
 const initialData: HearingFormData = {
   companyName: '',
@@ -22,12 +24,42 @@ const initialData: HearingFormData = {
   referenceImages: [],
 }
 
+function loadFromSession(): HearingFormData {
+  if (typeof window === 'undefined') return initialData
+  try {
+    const saved = sessionStorage.getItem(SESSION_KEY)
+    if (saved) return { ...initialData, ...JSON.parse(saved) }
+  } catch {
+    // ignore
+  }
+  return initialData
+}
+
+function saveToSession(data: HearingFormData) {
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(data))
+  } catch {
+    // ignore
+  }
+}
+
 export default function HomePage() {
   const [step, setStep] = useState(0) // 0 = landing, 1-5 = steps
   const [formData, setFormData] = useState<HearingFormData>(initialData)
+  const [hydrated, setHydrated] = useState(false)
+
+  // sessionStorageからの復元（クライアントのみ）
+  useEffect(() => {
+    setFormData(loadFromSession())
+    setHydrated(true)
+  }, [])
 
   const updateData = (partial: Partial<HearingFormData>) => {
-    setFormData((prev) => ({ ...prev, ...partial }))
+    setFormData((prev) => {
+      const next = { ...prev, ...partial }
+      saveToSession(next)
+      return next
+    })
   }
 
   // ランディング画面
@@ -52,6 +84,7 @@ export default function HomePage() {
 
           <button
             onClick={() => setStep(1)}
+            aria-label="ヒアリングを始める"
             className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold text-lg hover:bg-blue-700 active:scale-[0.98] transition-all shadow-md"
           >
             ヒアリングを始める
@@ -65,6 +98,8 @@ export default function HomePage() {
     )
   }
 
+  if (!hydrated) return null
+
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
       {/* ヘッダー */}
@@ -72,7 +107,7 @@ export default function HomePage() {
         <div className="max-w-lg mx-auto">
           <div className="flex items-center justify-between px-4 py-3">
             <h1 className="font-bold text-gray-800 text-sm">アプリ開発ヒアリング</h1>
-            <span className="text-xs text-gray-400">Step {step <= 2 ? step : step - 1} / 4</span>
+            <span className="text-xs text-gray-400">Step {step} / 5</span>
           </div>
           <ProgressBar currentStep={step} />
         </div>
@@ -91,8 +126,16 @@ export default function HomePage() {
           <Step2Challenges
             data={formData}
             onChange={updateData}
-            onNext={() => setStep(4)}
+            onNext={() => setStep(3)}
             onBack={() => setStep(1)}
+          />
+        )}
+        {step === 3 && (
+          <Step3AppSelection
+            data={formData}
+            onChange={updateData}
+            onNext={() => setStep(4)}
+            onBack={() => setStep(2)}
           />
         )}
         {step === 4 && (
@@ -100,7 +143,7 @@ export default function HomePage() {
             data={formData}
             onChange={updateData}
             onNext={() => setStep(5)}
-            onBack={() => setStep(2)}
+            onBack={() => setStep(3)}
           />
         )}
         {step === 5 && (

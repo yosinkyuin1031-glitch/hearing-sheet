@@ -1,10 +1,11 @@
 'use client'
 
 const STEPS = [
-  { num: 1, displayNum: 1, label: '基本情報' },
-  { num: 2, displayNum: 2, label: 'お困りごと' },
-  { num: 4, displayNum: 3, label: '詳細ヒアリング' },
-  { num: 5, displayNum: 4, label: '確認・送信' },
+  { num: 1, label: '基本情報' },
+  { num: 2, label: 'お困りごと' },
+  { num: 3, label: 'アプリ選択' },
+  { num: 4, label: '詳細入力' },
+  { num: 5, label: '確認・送信' },
 ]
 
 export default function ProgressBar({ currentStep }: { currentStep: number }) {
@@ -21,9 +22,15 @@ export default function ProgressBar({ currentStep }: { currentStep: number }) {
                     : 'bg-gray-200 text-gray-400'
                 }`}
               >
-                {currentStep > step.num ? '✓' : step.displayNum}
+                {currentStep > step.num ? (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  step.num
+                )}
               </div>
-              <span className={`text-[10px] mt-1 ${
+              <span className={`text-[9px] mt-1 whitespace-nowrap ${
                 currentStep >= step.num ? 'text-blue-600 font-medium' : 'text-gray-400'
               }`}>
                 {step.label}

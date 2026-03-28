@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { HearingFormData, CHALLENGES } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/components/ui/Toast'
 
 interface Props {
   data: HearingFormData
@@ -40,15 +41,21 @@ const QUESTION_LABELS: Record<string, string> = {
   other_notes: 'その他',
 }
 
+const SESSION_KEY = 'hearing_form_data'
+
 export default function Step5Confirm({ data, onBack }: Props) {
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
   const router = useRouter()
+  const { showToast, ToastContainer } = useToast()
 
   const challengeLabels = data.challenges
     .map((id) => CHALLENGES.find((c) => c.id === id)?.label || id)
 
   async function handleSubmit() {
     setSubmitting(true)
+    setSubmitError(null)
     try {
       const { data: inserted, error } = await supabase
         .from('hearing_responses')
@@ -69,25 +76,43 @@ export default function Step5Confirm({ data, onBack }: Props) {
 
       if (error) throw error
 
-      // AI仕様書生成 + メール通知をバックグラウンドで実行
+      // AI仕様書生成をバックグラウンドで実行（失敗してもフォールバックあり）
       if (inserted?.id) {
         fetch('/api/generate-spec', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ responseId: inserted.id }),
-        }).catch(console.error)
+        }).catch((err) => {
+          console.warn('AI spec generation failed (background):', err)
+          // フォールバック: 管理画面から手動再生成可能のため無視
+        })
 
+        // メール通知（失敗してもフォームデータは送信済みなので問題なし）
         fetch('/api/notify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ responseId: inserted.id }),
-        }).catch(console.error)
+        }).catch((err) => {
+          console.warn('Email notification failed (background):', err)
+          // フォールバック: 管理画面で確認可能なため無視
+        })
       }
 
-      router.push('/complete')
+      // sessionStorageをクリア（送信完了後）
+      try {
+        sessionStorage.removeItem(SESSION_KEY)
+      } catch {
+        // ignore
+      }
+
+      showToast('送信しました！ありがとうございます', 'success', 2000)
+      setTimeout(() => router.push('/complete'), 500)
     } catch (err) {
       console.error('Submit error:', err)
-      alert('送信に失敗しました。もう一度お試しください。')
+      const message = err instanceof Error ? err.message : '不明なエラーが発生しました'
+      setSubmitError(message)
+      showToast('送信に失敗しました。もう一度お試しください。', 'error')
+      setRetryCount((prev) => prev + 1)
     } finally {
       setSubmitting(false)
     }
@@ -95,6 +120,7 @@ export default function Step5Confirm({ data, onBack }: Props) {
 
   return (
     <div className="animate-fade-in space-y-6 px-4">
+      <ToastContainer />
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-gray-800">入力内容の確認</h2>
         <p className="text-gray-500 mt-2 text-sm">内容をご確認の上、送信してください</p>
@@ -193,6 +219,28 @@ export default function Step5Confirm({ data, onBack }: Props) {
         )}
       </div>
 
+      {/* エラー表示 + リトライUI */}
+      {submitError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-700">送信に失敗しました</p>
+              <p className="text-xs text-red-600 mt-1">
+                通信エラーが発生しました。ネットワーク接続を確認してもう一度お試しください。
+                {retryCount >= 3 && (
+                  <span className="block mt-1">
+                    繰り返し失敗する場合は、お電話またはメールで直接ご連絡ください。
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-3">
         <button
           onClick={onBack}
@@ -211,6 +259,8 @@ export default function Step5Confirm({ data, onBack }: Props) {
               <span className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
               送信中...
             </span>
+          ) : submitError ? (
+            'もう一度送信する'
           ) : (
             '送信する'
           )}

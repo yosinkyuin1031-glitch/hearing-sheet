@@ -75,8 +75,24 @@ export default function Step3AppSelection({ data, onChange, onNext, onBack }: Pr
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full" />
+      <div className="animate-fade-in space-y-5 px-4">
+        <div className="text-center mb-4">
+          <div className="h-8 w-56 bg-gray-200 rounded-lg mx-auto animate-pulse" />
+          <div className="h-4 w-72 bg-gray-100 rounded mx-auto mt-3 animate-pulse" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-xl border-2 border-gray-100 bg-white p-3 animate-pulse">
+              <div className="w-8 h-8 bg-gray-200 rounded mb-2" />
+              <div className="h-4 w-20 bg-gray-200 rounded mb-1" />
+              <div className="h-3 w-full bg-gray-100 rounded" />
+            </div>
+          ))}
+        </div>
+        <div className="space-y-2">
+          <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+          <div className="h-20 w-full bg-gray-100 rounded-xl animate-pulse" />
+        </div>
       </div>
     )
   }
@@ -187,6 +203,8 @@ export default function Step3AppSelection({ data, onChange, onNext, onBack }: Pr
                 }`}>
                   <button
                     onClick={() => toggleApp(app.name)}
+                    aria-label={`${app.name}${selected ? '（選択済み）' : ''}`}
+                    aria-pressed={selected}
                     className="w-full text-left p-3"
                   >
                     <div className="flex items-start gap-3">
@@ -289,12 +307,14 @@ export default function Step3AppSelection({ data, onChange, onNext, onBack }: Pr
       <div className="flex gap-3">
         <button
           onClick={onBack}
+          aria-label="前のステップに戻る"
           className="flex-1 py-4 rounded-xl border-2 border-gray-200 text-gray-600 font-bold text-base hover:bg-gray-50"
         >
           戻る
         </button>
         <button
           onClick={onNext}
+          aria-label="次のステップへ進む"
           className="flex-[2] py-4 rounded-xl text-white font-bold text-lg transition-all bg-blue-600 hover:bg-blue-700 active:scale-[0.98]"
         >
           次へ進む
