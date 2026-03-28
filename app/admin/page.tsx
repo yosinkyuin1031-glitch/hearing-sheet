@@ -1,11 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { HearingResponse, CHALLENGES } from '@/lib/types'
 import { useToast } from '@/components/ui/Toast'
-
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'oguchi2026'
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   draft: { label: '下書き', color: 'bg-gray-100 text-gray-600' },
@@ -14,12 +12,19 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   completed: { label: '完了', color: 'bg-green-100 text-green-700' },
 }
 
+type SortOrder = 'newest' | 'oldest'
+type StatusFilter = 'all' | 'draft' | 'submitted' | 'reviewed' | 'completed'
+
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false)
   const [password, setPassword] = useState('')
+  const [authLoading, setAuthLoading] = useState(false)
   const [responses, setResponses] = useState<HearingResponse[]>([])
   const [selected, setSelected] = useState<HearingResponse | null>(null)
   const [loading, setLoading] = useState(false)
+  const [sortOrder, setSortOrder] = useState<SortOrder>('newest')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const { showToast, ToastContainer } = useToast()
 
   const loadResponses = useCallback(async () => {
@@ -35,6 +40,55 @@ export default function AdminPage() {
   useEffect(() => {
     if (authed) loadResponses()
   }, [authed, loadResponses])
+
+  // フィルタ・ソート・検索を適用した一覧
+  const filteredResponses = useMemo(() => {
+    let list = [...responses]
+
+    // ステータスフィルタ
+    if (statusFilter !== 'all') {
+      list = list.filter((r) => r.status === statusFilter)
+    }
+
+    // 検索（会社名・氏名）
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase()
+      list = list.filter(
+        (r) =>
+          (r.contact_name || '').toLowerCase().includes(q) ||
+          (r.company_name || '').toLowerCase().includes(q)
+      )
+    }
+
+    // ソート
+    list.sort((a, b) => {
+      const diff = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      return sortOrder === 'newest' ? -diff : diff
+    })
+
+    return list
+  }, [responses, statusFilter, searchQuery, sortOrder])
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault()
+    setAuthLoading(true)
+    try {
+      const res = await fetch('/api/admin-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      })
+      if (res.ok) {
+        setAuthed(true)
+      } else {
+        showToast('パスワードが違います', 'error')
+      }
+    } catch {
+      showToast('認証に失敗しました。もう一度お試しください。', 'error')
+    } finally {
+      setAuthLoading(false)
+    }
+  }
 
   async function updateStatus(id: string, status: string) {
     await supabase.from('hearing_responses').update({ status }).eq('id', id)
@@ -55,7 +109,6 @@ export default function AdminPage() {
     })
     if (res.ok) {
       await loadResponses()
-      // Refresh selected
       const { data } = await supabase.from('hearing_responses').select('*').eq('id', id).single()
       if (data) setSelected(data as HearingResponse)
       showToast('AI仕様書を生成しました', 'success')
@@ -75,20 +128,14 @@ export default function AdminPage() {
     URL.revokeObjectURL(url)
   }
 
+  // ログイン画面
   if (!authed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <ToastContainer />
         <div className="w-full max-w-sm">
           <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">管理画面</h1>
-          <form onSubmit={(e) => {
-            e.preventDefault()
-            if (password === ADMIN_PASSWORD) {
-              setAuthed(true)
-            } else {
-              showToast('パスワードが違います', 'error')
-            }
-          }}>
+          <form onSubmit={handleLogin}>
             <input
               type="password"
               value={password}
@@ -97,8 +144,12 @@ export default function AdminPage() {
               aria-label="管理画面パスワード"
               className="w-full rounded-xl border border-gray-200 px-4 py-3 text-base mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <button type="submit" className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700">
-              ログイン
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50"
+            >
+              {authLoading ? 'ログイン中...' : 'ログイン'}
             </button>
           </form>
         </div>
@@ -106,6 +157,7 @@ export default function AdminPage() {
     )
   }
 
+  // 詳細画面
   if (selected) {
     const challengeLabels = (selected.challenges || [])
       .map((id) => CHALLENGES.find((c) => c.id === id)?.label || id)
@@ -230,6 +282,7 @@ export default function AdminPage() {
     )
   }
 
+  // 一覧画面
   return (
     <div className="min-h-screen bg-gray-50">
       <ToastContainer />
@@ -242,18 +295,91 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4">
+      <div className="max-w-4xl mx-auto p-4 space-y-4">
+        {/* 検索・フィルタ・ソート */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+          {/* 検索ボックス */}
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="会社名・氏名で検索"
+              aria-label="会社名・氏名で検索"
+              className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                aria-label="検索クリア"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          <div className="flex gap-3 flex-wrap">
+            {/* ステータスフィルタ */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {(['all', 'draft', 'submitted', 'reviewed', 'completed'] as StatusFilter[]).map((s) => {
+                const label = s === 'all' ? '全て' : STATUS_LABELS[s]?.label || s
+                const isActive = statusFilter === s
+                return (
+                  <button
+                    key={s}
+                    onClick={() => setStatusFilter(s)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      isActive
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* ソート */}
+            <div className="ml-auto">
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+                aria-label="並び順"
+                className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              >
+                <option value="newest">新しい順</option>
+                <option value="oldest">古い順</option>
+              </select>
+            </div>
+          </div>
+
+          {/* 件数表示 */}
+          <p className="text-xs text-gray-500">
+            {filteredResponses.length}件 / 全{responses.length}件
+          </p>
+        </div>
+
+        {/* 一覧 */}
         {loading ? (
           <div className="flex justify-center py-20">
-            <div className="animate-spin w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full" />
+            <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full" />
           </div>
-        ) : responses.length === 0 ? (
+        ) : filteredResponses.length === 0 ? (
           <div className="text-center py-20 text-gray-400">
-            <p className="text-lg">まだ回答がありません</p>
+            <p className="text-lg">
+              {responses.length === 0 ? 'まだ回答がありません' : '条件に一致する回答がありません'}
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
-            {responses.map((r) => (
+            {filteredResponses.map((r) => (
               <button
                 key={r.id}
                 onClick={() => setSelected(r)}

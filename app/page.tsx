@@ -90,9 +90,16 @@ export default function HomePage() {
             ヒアリングを始める
           </button>
 
-          <p className="mt-6 text-xs text-gray-400">
-            開発: 大口テック
-          </p>
+          <div className="mt-6 space-y-2">
+            <p className="text-xs text-gray-400">
+              株式会社ROLE OWL
+            </p>
+            <div className="flex justify-center gap-3 text-xs text-gray-400">
+              <a href="/terms" className="hover:text-gray-600 hover:underline">利用規約</a>
+              <span>|</span>
+              <a href="/privacy" className="hover:text-gray-600 hover:underline">プライバシーポリシー</a>
+            </div>
+          </div>
         </div>
       </div>
     )
